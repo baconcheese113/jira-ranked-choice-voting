@@ -1,0 +1,26 @@
+app:
+  id: ari:cloud:ecosystem::app/1009abbf-2d57-4d33-98eb-25b9f24d3516
+  name: ct-voting
+modules:
+  'jira:customField':
+    - key: issue-progress-custom-field
+      name: Ranked vote
+      description: 'Submit a vote from 1 to 3, or remove ranking'
+      edit:
+        function: voteEdit
+      data:
+        type: string
+        storage:
+          issueProperty:
+            key: voteFieldValue
+      readOnly: false
+      function: voteRender
+  function:
+    - key: voteRender
+      handler: index.voteRender
+    - key: voteEdit
+      handler: index.voteEdit
+permissions:
+  scopes:
+    - 'read:jira-work'
+    - 'write:jira-work'
