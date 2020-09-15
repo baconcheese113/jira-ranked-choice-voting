@@ -20,7 +20,8 @@ import ForgeUI, {
 import { useIssueProperty } from '@forge/ui-jira'
 import api from '@forge/api';
 
-const defaultReqOptions = { 'content-type': 'application/json' }
+const defaultReqOptions = { 'content-type': 'application/json' };
+const CHOICE_COUNT = 3;
 
 const VoteField = () => {
   const [votes, setVotes, deleteVotes] = useIssueProperty('ct-votes', {}); // { [userId: string]: { rank: number } } || { '12345': {rank: 1} }
@@ -39,7 +40,7 @@ const VoteField = () => {
           </Fragment>
         ))}
       </Fragment>
-      <Text content={defaultOption || ''} />
+      <Text content={defaultOption || 'Unranked'} />
     </CustomFieldView>
   )
 };
@@ -55,27 +56,48 @@ const Edit = () => {
   }
 
   const onSave = async (formValue) => {
+    // TODO remove existing vote off other issue for specified rank
+
+    // Update user's vote on issue
+    const newRank = formValue.voteFieldValue;
+    const { [accountId]: userId, ...existingVotes } = votes;
+    const updatedVotes = newRank 
+      ? await setVotes({ ...votes, [accountId]: { rank: newRank }})
+      : await setVotes(existingVotes);
+
+    // Get new vote agg
+    console.log('updatedVotes', updatedVotes)
+    const newAgg = Object.entries(updatedVotes).reduce((total, vote) => {
+      const rankInt = vote[1] ? parseInt(vote[1].rank) : 0;
+      return total + CHOICE_COUNT - (rankInt ? rankInt - 1 : CHOICE_COUNT);
+    }, 0);
+
+    // Update issue summary
     const issueMetadata = await request(`/rest/api/3/issue/${platformContext.issueKey}`)
-    console.log('issueMetadata', issueMetadata)
     const { summary } = issueMetadata.fields;
-    const existingAgg = summary.match(/^\[.*\] /);
-    const newMetadata = await request(`/rest/api/3/issue/${platformContext.issueKey}/summary`, {
+    const existingAgg = summary.match(/^\[.*\]\s*(.*)/);
+    const newSummary = `[${newAgg}] ${existingAgg ? existingAgg[1] : summary}`;
+    const body = JSON.stringify({
+      update: {
+        summary: [
+          { set: newSummary }
+        ]
+      },
+      field: {
+        summary: newSummary
+      }
+    });
+    await request(`/rest/api/3/issue/${platformContext.issueKey}`, {
       ...defaultReqOptions,
       method: 'PUT',
-      body: {
-        summary: 'A new hope',
-      }
+      body,
     })
-    console.log('newMetadata', newMetadata)
-    console.log('existingAgg', existingAgg)
-    const { [accountId]: userId, ...existingVotes } = votes;
-    if (!formValue.voteFieldValue) await setVotes(existingVotes);
-    else await setVotes({ ...votes, [accountId]: { rank: formValue.voteFieldValue } })
-    return formValue.voteFieldValue
+    return newRank
   }
 
   return (
     <CustomFieldEdit onSave={onSave} header="Select vote" width="medium" >
+      {/* TODO show current allocated votes */}
       <Select label="Your Ranked Vote" name="voteFieldValue" isRequired>
         <Option label="1" value="1" defaultSelected={isDefaultSelected('1')} />
         <Option label="2" value="2" defaultSelected={isDefaultSelected('2')} />
@@ -102,7 +124,7 @@ async function request(apiPath, options = defaultReqOptions) {
     console.error(message);
     throw new Error(message);
   }
-  const responseBody = await response.json();
+  const responseBody = response.statusText === 'No Content' ? {} : await response.json();
   if (process.env.DEBUG_LOGGING) {
     console.debug(`GET ${apiPath}: ${JSON.stringify(responseBody)}`);
   }
