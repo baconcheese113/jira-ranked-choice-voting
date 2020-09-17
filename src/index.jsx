@@ -60,10 +60,9 @@ const Edit = () => {
   const onSave = async (formValue) => {
     const newRank = formValue.voteFieldValue;
     console.log('newRank', newRank)
-    // Remove existing vote off other issue for specified rank if exists.
+    // Remove existing vote off other issue for specified rank if exists
     // TODO Max returned results is 100, so need to paginate through to make sure all epics are checked
-    // TODO only request used fields
-    // TODO Update agg score on other issue when removing vote
+    // TODO Only request used fields
     const allIssuesMetadata = await request(`/rest/api/3/search?maxResults=100&properties=forge-ct-votes&jql=${encodeURI(`issuetype=Epic AND project=${platformContext.projectKey}`)}`);
     console.log('allIssuesMetadata', allIssuesMetadata);
     const differentIssues = allIssuesMetadata.issues.filter((issue) => {
@@ -78,10 +77,28 @@ const Edit = () => {
       const {[accountId]: _id, ...otherUserVotes} = issue.properties['forge-ct-votes'];
       console.log('issue.properties[forge-ct-votes]', issue.properties['forge-ct-votes']);
       console.log('otherUserVotes', otherUserVotes);
-      return request(`/rest/api/3/issue/${issue.key}/properties/forge-ct-votes`, {
+      // Update agg score in summary on other issue when removing vote
+      const updatedAgg = Object.entries(otherUserVotes).reduce((total, vote) => {
+        const rankInt = vote[1] ? parseInt(vote[1].rank) : 0;
+        return total + CHOICE_COUNT - (rankInt ? rankInt - 1 : CHOICE_COUNT);
+      }, 0);
+      const { summary } = issue.fields;
+      const existingAgg = summary.match(/^\[.*\]\s*(.*)/);
+      const newSummary = `[${updatedAgg}] ${existingAgg ? existingAgg[1] : summary}`;
+      return request(`/rest/api/3/issue/${issue.key}`, {
         ...defaultReqOptions,
         method: 'PUT',
-        body: JSON.stringify(otherUserVotes)
+        body: JSON.stringify({
+          fields: {
+            summary: newSummary
+          },
+          properties: [
+            {
+              key: 'forge-ct-votes',
+              value: otherUserVotes
+            }
+          ]
+        })
       })
     }));
 
@@ -109,12 +126,7 @@ const Edit = () => {
       ...defaultReqOptions,
       method: 'PUT',
       body: JSON.stringify({
-        update: {
-          summary: [
-            { set: newSummary }
-          ]
-        },
-        field: {
+        fields: {
           summary: newSummary
         }
       })
