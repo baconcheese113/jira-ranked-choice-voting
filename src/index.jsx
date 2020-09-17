@@ -28,6 +28,7 @@ const VoteField = () => {
   const { platformContext, accountId } = useProductContext();
   const defaultOption = votes[accountId] ? votes[accountId].rank : undefined;
   console.log('votes', votes)
+  console.log(platformContext)
 
   if (platformContext.issueType !== 'Epic') return null;
   return (
@@ -40,13 +41,14 @@ const VoteField = () => {
           </Fragment>
         ))}
       </Fragment>
+      {/* TODO Show list of existing issues ranks */}
       <Text content={defaultOption || 'Unranked'} />
     </CustomFieldView>
   )
 };
 
 const Edit = () => {
-  const [votes, setVotes, deleteVotes] = useIssueProperty('ct-votes', {});
+  const [votes, setVotes] = useIssueProperty('ct-votes', {});
   const { platformContext, accountId } = useProductContext();
   const defaultOption = votes[accountId] ? votes[accountId].rank : undefined;
 
@@ -56,13 +58,37 @@ const Edit = () => {
   }
 
   const onSave = async (formValue) => {
-    // TODO remove existing vote off other issue for specified rank
+    const newRank = formValue.voteFieldValue;
+    console.log('newRank', newRank)
+    // Remove existing vote off other issue for specified rank if exists.
+    // TODO Max returned results is 100, so need to paginate through to make sure all epics are checked
+    // TODO only request used fields
+    // TODO Update agg score on other issue when removing vote
+    const allIssuesMetadata = await request(`/rest/api/3/search?maxResults=100&properties=forge-ct-votes&jql=${encodeURI(`issuetype=Epic AND project=${platformContext.projectKey}`)}`);
+    console.log('allIssuesMetadata', allIssuesMetadata);
+    const differentIssues = allIssuesMetadata.issues.filter((issue) => {
+      const isDifferentIssue = issue.key !== platformContext.issueKey;
+      const ctVotesProperty = issue.properties['forge-ct-votes'];
+      if (!isDifferentIssue || !ctVotesProperty || !ctVotesProperty[accountId]) return false;
+      console.log('ctVotesProperty[accountId]', ctVotesProperty[accountId]);
+      return ctVotesProperty[accountId].rank === newRank;
+    });
+    console.log('differentIssues', differentIssues);
+    await Promise.all(differentIssues.map(issue => {
+      const {[accountId]: _id, ...otherUserVotes} = issue.properties['forge-ct-votes'];
+      console.log('issue.properties[forge-ct-votes]', issue.properties['forge-ct-votes']);
+      console.log('otherUserVotes', otherUserVotes);
+      return request(`/rest/api/3/issue/${issue.key}/properties/forge-ct-votes`, {
+        ...defaultReqOptions,
+        method: 'PUT',
+        body: JSON.stringify(otherUserVotes)
+      })
+    }));
 
     // Update user's vote on issue
-    const newRank = formValue.voteFieldValue;
     const { [accountId]: userId, ...existingVotes } = votes;
-    const updatedVotes = newRank 
-      ? await setVotes({ ...votes, [accountId]: { rank: newRank }})
+    const updatedVotes = newRank
+      ? await setVotes({ ...votes, [accountId]: { rank: newRank } })
       : await setVotes(existingVotes);
 
     // Get new vote agg
@@ -73,25 +99,27 @@ const Edit = () => {
     }, 0);
 
     // Update issue summary
-    const issueMetadata = await request(`/rest/api/3/issue/${platformContext.issueKey}`)
+    const issueMetadata = await request(`/rest/api/3/issue/${platformContext.issueKey}?fields=summary&properties=forge-ct-votes`);
+    console.log('issueMetadata', issueMetadata);
     const { summary } = issueMetadata.fields;
     const existingAgg = summary.match(/^\[.*\]\s*(.*)/);
     const newSummary = `[${newAgg}] ${existingAgg ? existingAgg[1] : summary}`;
-    const body = JSON.stringify({
-      update: {
-        summary: [
-          { set: newSummary }
-        ]
-      },
-      field: {
-        summary: newSummary
-      }
-    });
+
     await request(`/rest/api/3/issue/${platformContext.issueKey}`, {
       ...defaultReqOptions,
       method: 'PUT',
-      body,
-    })
+      body: JSON.stringify({
+        update: {
+          summary: [
+            { set: newSummary }
+          ]
+        },
+        field: {
+          summary: newSummary
+        }
+      })
+    });
+    // TODO update issue title for user without page refresh
     return newRank
   }
 
@@ -124,7 +152,7 @@ async function request(apiPath, options = defaultReqOptions) {
     console.error(message);
     throw new Error(message);
   }
-  const responseBody = response.statusText === 'No Content' ? {} : await response.json();
+  const responseBody = !(await response.text()) ? {} : await response.json();
   if (process.env.DEBUG_LOGGING) {
     console.debug(`GET ${apiPath}: ${JSON.stringify(responseBody)}`);
   }
