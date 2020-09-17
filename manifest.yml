@@ -15,11 +15,17 @@ modules:
             key: voteFieldValue
       readOnly: false
       function: voteRender
+  'jira:issuePanel':
+    - key: ranked-vote-panel
+      title: Ranked Vote Panel
+      function: votePanel
   function:
     - key: voteRender
       handler: index.voteRender
     - key: voteEdit
       handler: index.voteEdit
+    - key: votePanel
+      handler: votePanel.run
 permissions:
   scopes:
     - 'read:jira-work'
