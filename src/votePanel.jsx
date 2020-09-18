@@ -49,9 +49,10 @@ const VotePanel = () => {
       <SectionMessage title="Your Current Votes" appearance="info">
         {["1", "2", "3"].map(rank => {
           const myVote = myVotes.find(vote => vote.properties['forge-ct-votes'][accountId].rank === rank);
+          const isThisIssueMsg = myVote && myVote.key === platformContext.issueKey ? ' (this issue)' : '';
           const link = myVote ? <Link href={myVote.self}>{`${myVote.key} - ${myVote.fields.summary}`}</Link> : 'Unranked';
 
-          return <Text format="markup">Choice {rank}: {link}</Text>;
+          return <Text format="markup">Choice {rank}: {link}{isThisIssueMsg}</Text>;
         })}
       </SectionMessage>
       <Table>
