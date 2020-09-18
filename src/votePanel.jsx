@@ -16,7 +16,7 @@ import ForgeUI, {
   SectionMessage,
 } from "@forge/ui";
 import { useIssueProperty } from "@forge/ui-jira";
-import { request } from "./util";
+import { request, getAppearance } from "./util";
 
 const VotePanel = () => {
   const [votes] = useIssueProperty('ct-votes', {}); // { [userId: string]: { rank: number } }
@@ -42,21 +42,10 @@ const VotePanel = () => {
     await updateVoteAllocations()
   }, [])
 
-  // TODO Sort by vote ranking
-  const getAppearance = (rank) => {
-    // default - grey, inprogress - light blue,
-    // moved - yellow, new - light purple
-    // removed - red, success - light green
-    if (rank === '1') return 'success';
-    if (rank === '2') return 'inprogress';
-    return 'new'
-  }
-
-
-
   if (platformContext.issueType !== 'Epic') return null;
   return (
     <Fragment>
+      {/* TODO Sort by vote ranking */}
       <SectionMessage title="Your Current Votes" appearance="info">
         {["1", "2", "3"].map(rank => {
           const myVote = myVotes.find(vote => vote.properties['forge-ct-votes'][accountId].rank === rank);

@@ -3,7 +3,7 @@ app:
   name: ct-voting
 modules:
   'jira:customField':
-    - key: issue-progress-custom-field
+    - key: ranked-vote-editable-field
       name: Ranked vote
       description: 'Submit a vote from 1 to 3, or remove ranking'
       edit:

@@ -11,15 +11,29 @@ export const DEFAULT_REQ_OPTIONS = { 'content-type': 'application/json' };
  * @param options object with additional Fetch params. See https://developer.atlassian.com/platform/forge/js-api-reference/product-fetch-api/#requestconfluence
  */
 export async function request(apiPath, options = DEFAULT_REQ_OPTIONS) {
-    const response = await api.asApp().requestJira(apiPath, options);
-    if (!response.ok) {
-      const message = `Error invoking ${apiPath}: ${response.status} ${await response.text()}`;
-      console.error(message);
-      throw new Error(message);
-    }
-    const responseBody = !(await response.text()) ? {} : await response.json();
-    if (process.env.DEBUG_LOGGING) {
-      console.debug(`GET ${apiPath}: ${JSON.stringify(responseBody)}`);
-    }
-    return responseBody;
+  const response = await api.asApp().requestJira(apiPath, options);
+  if (!response.ok) {
+    const message = `Error invoking ${apiPath}: ${response.status} ${await response.text()}`;
+    console.error(message);
+    throw new Error(message);
   }
+  const responseBody = !(await response.text()) ? {} : await response.json();
+  if (process.env.DEBUG_LOGGING) {
+    console.debug(`GET ${apiPath}: ${JSON.stringify(responseBody)}`);
+  }
+  return responseBody;
+}
+
+/**
+ * Get color associated with different vote rankings
+ * 
+ * @param rank the current rank as a string
+ */
+export const getAppearance = (rank) => {
+  // default - grey, inprogress - light blue,
+  // moved - yellow, new - light purple
+  // removed - red, success - light green
+  if (rank === '1') return 'success';
+  if (rank === '2') return 'inprogress';
+  return 'new'
+}
