@@ -22,8 +22,10 @@ const VotePanel = () => {
   const [votes] = useIssueProperty('ct-votes', {}); // { [userId: string]: { rank: number } }
   const { platformContext, accountId } = useProductContext();
   const [myVotes, setMyVotes] = useState([]);
-
+  
   useEffect(async () => {
+    // TODO Don't do this https://ecosystem.atlassian.net/jira/software/c/projects/FRGE/issues/FRGE-88
+    if(platformContext.issueType !== 'Epic') return;
     const allIssues = await getAllVotableIssues(platformContext.projectKey);
     const myRankedIssues = allIssues.issues.filter((issue) => {
       const ctVotesProperty = issue.properties['forge-ct-votes'];
@@ -32,6 +34,9 @@ const VotePanel = () => {
     setMyVotes(myRankedIssues); // To trigger component refresh
   }, [])
 
+  // TODO Also don't do this
+  if(platformContext.issueType !== 'Epic') return <Text>Only Epics can be voted on.</Text>;
+  
   const sortedVotes = Object.entries(votes)
     .reduce((prev, [id, { rank }]) => [...prev, { id, rank }], [])
     .sort((a, b) => a.rank - b.rank);
