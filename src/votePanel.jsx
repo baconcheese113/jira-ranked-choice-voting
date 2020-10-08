@@ -47,7 +47,9 @@ const VotePanel = () => {
         {CHOICE_ARRAY.map(rank => {
           const myVote = myVotes.find(vote => vote.properties['forge-ct-votes'][accountId].rank === rank);
           const isThisIssueMsg = myVote && myVote.key === platformContext.issueKey ? ' (current issue)' : '';
-          const link = myVote ? <Link href={myVote.self}>{`${myVote.key} - ${myVote.fields.summary}`}</Link> : 'Unranked';
+          // TODO get instance name programmatically, currently /serverinfo doesn't support oauth
+          const url = myVote ? `https://commercialtribe1.atlassian.net/browse/${myVote.key}` : '';
+          const link = myVote ? <Link href={url}>{`${myVote.key} - ${myVote.fields.summary}`}</Link> : 'Unranked';
 
           return <Text format="markup">Choice {rank}: {link}{isThisIssueMsg}</Text>;
         })}
