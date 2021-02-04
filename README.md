@@ -1,4 +1,4 @@
-# Forge Ranked Choice integration"
+# Forge Ranked Choice integration
 
 This project allows users to vote on issues (currently limited to Epics). It is based around the concept of [RCV](https://ballotpedia.org/Ranked-choice_voting_(RCV)) (Ranked Choice Voting). See `manifest.yml` for current components.
 

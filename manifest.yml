@@ -18,6 +18,7 @@ modules:
   "jira:issuePanel":
     - key: ranked-vote-panel
       title: Your Current Votes
+      icon: https://github.com/baconcheese113/jira-ranked-choice-voting/blob/master/assets/vote.jpg?raw=true
       function: votePanel
   function:
     - key: voteRender
@@ -28,5 +29,6 @@ modules:
       handler: votePanel.run
 permissions:
   scopes:
+    - "read:me"
     - "read:jira-work"
     - "write:jira-work"

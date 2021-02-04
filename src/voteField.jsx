@@ -2,12 +2,11 @@ import ForgeUI, {
   render,
   useProductContext,
   CustomField,
-  CustomFieldView,
+  CustomFieldEdit,
   Text,
   StatusLozenge,
   Select,
   Option,
-  CustomFieldEdit,
 } from "@forge/ui";
 import { useIssueProperty } from '@forge/ui-jira'
 import { request, DEFAULT_REQ_OPTIONS, getAppearance, CHOICE_COUNT, getAllVotableIssues, getSummaryWithPoints, CHOICE_ARRAY } from "./util";
@@ -18,14 +17,12 @@ const VoteField = () => {
   const defaultOption = votes[accountId] ? votes[accountId].rank : undefined;
 
   return (
-    <CustomFieldView>
       <Text>
         {defaultOption
           ? <StatusLozenge text={defaultOption} appearance={getAppearance(defaultOption)} />
           : 'Unranked'
         }
       </Text>
-    </CustomFieldView>
   )
 };
 
@@ -80,7 +77,7 @@ const Edit = () => {
 
   }
 
-  const onSave = async (formValue) => {
+  const onSubmit = async (formValue) => {
     const newRank = formValue.voteFieldValue;
 
     await cleanupIssuesWithSameVote(newRank);
@@ -109,7 +106,7 @@ const Edit = () => {
   }
 
   return (
-    <CustomFieldEdit onSave={onSave} header="Select vote" width="medium" >
+    <CustomFieldEdit onSubmit={onSubmit} header="Select vote" width="medium" >
       <Select label="Your Ranked Vote" name="voteFieldValue" isRequired>
         {CHOICE_ARRAY.map(choice => (
           <Option label={choice} value={choice} defaultSelected={isDefaultSelected(choice)} />
@@ -121,5 +118,5 @@ const Edit = () => {
   );
 };
 
-export const voteRender = render(<CustomField view={<VoteField />} />);
+export const voteRender = render(<CustomField><VoteField /></CustomField>);
 export const voteEdit = render(<Edit />)
